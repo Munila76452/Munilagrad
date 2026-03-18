@@ -10,3 +10,6 @@ __pycache__/
 graphs/
 *.svg
 .DS_Store
+dist/
+build/
+*.egg-info/

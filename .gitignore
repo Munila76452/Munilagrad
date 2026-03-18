@@ -9,3 +9,4 @@ __pycache__/
 # Generated Graphs
 graphs/
 *.svg
+.DS_Store

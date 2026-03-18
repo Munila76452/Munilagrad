@@ -14,7 +14,7 @@ setup(
     url="https://github.com/Munila76452/Munilagrad", # Link to your GitHub
     packages=find_packages(), 
     install_requires=[
-        "graphviz" 
+        "graphviz" # it automatically installs when anyone downloads munilagrad
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

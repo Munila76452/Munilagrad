@@ -1,0 +1,11 @@
+# Virtual Environments
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Generated Graphs
+graphs/
+*.svg

@@ -1,27 +1,25 @@
-from munilagrad.engine import value
+from munilagrad.engine import value 
 from munilagrad.nn import MLP
 from munilagrad.viz import draw_dot
-xs = [
-    [2.0,3.0,-1.0],
-    [3.0,-1.0,0.5],
-    [0.5,1.0,1.0],
-    [1.0,1.0,-1.0]
-]
+import numpy as np
+# a = value([[1],[2],[3]])   # (3,1)
+# b = value(np.ones((3,4)))  # (3,4)
 
-ys = [1.0,-1.0,-1.0,1.0]
+# c = a / b
+# c.grad = np.ones((3,4))
 
-n = MLP(3,[4,4,1])
-for k in range(20):
-    ypred = [n([value(xi) for xi in x]) for x in xs]
-    loss = sum(((yout - value(ygt))**2 for ygt,yout in zip(ys,ypred)), value(0))
-    for p in n.parameters():
-        p.grad = 0.0
-    loss.backward()
-    for p in n.parameters():
-        p.data += -0.05 * p.grad
+# c._backward()
+# print(a.grad)
+# print(a.grad.shape)
+import numpy as np
 
-    print(k, loss.data)
-# DRAW THE GRAPH ONCE AFTER TRAINING
-print("Rendering computational graph...")
-dot = draw_dot(loss)
-dot.render('mlp_graph', format='svg', view=True)
+a = value(np.random.randn(3,4))
+b = value(np.random.randn(4,2))
+
+c = a.matmul(b)
+c.grad = np.ones((3,2))
+
+c._backward()
+
+print("a.grad shape:", a.grad.shape)  # (3,4)
+print("b.grad shape:", b.grad.shape)  # (4,2)

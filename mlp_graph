@@ -1,0 +1,64 @@
+digraph {
+	graph [rankdir=LR]
+	4462860416 [label="{  | data -0.0088 | shape (1, 4) | grad 0.0002 | shape (1, 4) }" shape=record]
+	4471896256 [label="{  | data 0.8333 | shape (4, 3) | grad -0.0000 | shape (4, 3) }" shape=record]
+	4471896304 [label="{  | data 0.0000 | shape (4, 1) | grad 0.0002 | shape (4, 1) }" shape=record]
+	4471896544 [label="{  | data 0.0175 | shape (4, 4) | grad 0.0003 | shape (4, 4) }" shape=record]
+	"4471896544matmul" [label=matmul]
+	"4471896544matmul" -> 4471896544
+	4471478880 [label="{  | data -0.0358 | shape (4, 1) | grad 0.0013 | shape (4, 1) }" shape=record]
+	4471896736 [label="{  | data 0.0156 | shape (4, 4) | grad 0.0003 | shape (4, 4) }" shape=record]
+	"4471896736+" [label="+"]
+	"4471896736+" -> 4471896736
+	4471347952 [label="{  | data -0.0003 | shape (4, 1) | grad -0.0002 | shape (4, 1) }" shape=record]
+	"4471347952+" [label="+"]
+	"4471347952+" -> 4471347952
+	4471784224 [label="{  | data 1.0002 | shape (4, 1) | grad 0.2500 | shape (4, 1) }" shape=record]
+	"4471784224*" [label="*"]
+	"4471784224*" -> 4471784224
+	4471896880 [label="{  | data 0.0668 | shape (4, 4) | grad 0.0000 | shape (4, 4) }" shape=record]
+	"4471896880RELU" [label=RELU]
+	"4471896880RELU" -> 4471896880
+	4375032656 [label="{  | data 0.0159 | shape (4, 4) | grad 0.0016 | shape (4, 4) }" shape=record]
+	4471897072 [label="{  | data 0.0061 | shape (4, 4) | grad 0.0000 | shape (4, 4) }" shape=record]
+	"4471897072matmul" [label=matmul]
+	"4471897072matmul" -> 4471897072
+	4471897264 [label="{  | data -0.0027 | shape (4, 4) | grad 0.0000 | shape (4, 4) }" shape=record]
+	"4471897264+" [label="+"]
+	"4471897264+" -> 4471897264
+	4471897408 [label="{  | data 0.0099 | shape (4, 4) | grad 0.0000 | shape (4, 4) }" shape=record]
+	"4471897408RELU" [label=RELU]
+	"4471897408RELU" -> 4471897408
+	4464682448 [label="{  | data -0.0020 | shape (1, 4) | grad 0.0011 | shape (1, 4) }" shape=record]
+	4471897600 [label="{  | data -0.0021 | shape (4, 1) | grad -0.0002 | shape (4, 1) }" shape=record]
+	"4471897600matmul" [label=matmul]
+	"4471897600matmul" -> 4471897600
+	4471897792 [label="{  | data -0.0003 | shape (4, 1) | grad -0.0002 | shape (4, 1) }" shape=record]
+	"4471897792+" [label="+"]
+	"4471897792+" -> 4471897792
+	4471897936 [label="{  | data -1.0000 | shape () | grad -2.0002 | shape () }" shape=record]
+	4471897984 [label="{  | data 0.0000 | shape (4, 1) | grad -0.0002 | shape (4, 1) }" shape=record]
+	"4471897984*" [label="*"]
+	"4471897984*" -> 4471897984
+	4471474080 [label="{  | data 0.0018 | shape (1, 1) | grad -0.0007 | shape (1, 1) }" shape=record]
+	4470681584 [label="{  | data -0.0020 | shape (3, 4) | grad 0.0039 | shape (3, 4) }" shape=record]
+	4471897408 -> "4471897600matmul"
+	4375032656 -> "4471897072matmul"
+	4471897792 -> "4471347952+"
+	4471474080 -> "4471897792+"
+	4471896544 -> "4471896736+"
+	4471896256 -> "4471896544matmul"
+	4471896304 -> "4471897984*"
+	4471897072 -> "4471897264+"
+	4470681584 -> "4471896544matmul"
+	4471347952 -> "4471784224*"
+	4471897600 -> "4471897792+"
+	4462860416 -> "4471897264+"
+	4471896880 -> "4471897072matmul"
+	4471897984 -> "4471347952+"
+	4471896736 -> "4471896880RELU"
+	4471478880 -> "4471897600matmul"
+	4464682448 -> "4471896736+"
+	4471897936 -> "4471897984*"
+	4471897264 -> "4471897408RELU"
+}

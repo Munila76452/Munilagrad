@@ -74,6 +74,15 @@ class value:
     other = other if isinstance(other, value) else value(other)
     return other - self
 
+  def sum(self):
+    out = value(np.sum(self.data),(self,),'sum')
+    
+    def _backward():
+      self.grad += value.unbroacasting(out.grad * np.ones_like(self.data),self.data.shape)
+      
+    out._backward = _backward
+    return out
+  
   def tanh(self):
     x = self.data
     t = (np.exp(2*x)-1) / (np.exp(2*x)+1)
@@ -103,15 +112,115 @@ class value:
     
     out = value(self.data @ other.data , (self,other),'matmul')
     def _backward():
-      self.grad = out.grad @ other.data.T
-      other.grad = self.data.T @ out.grad
+      self.grad += out.grad @ other.data.T
+      other.grad += self.data.T @ out.grad
     
     out._backward = _backward
     return out
+  
+  def conv2D(self,weight,bias,stride=1,padding=0):
+    x = self.data
+    w = weight.data
+    b = bias.data if bias else None
+    
+    if isinstance(stride,int):
+      sh,sw = stride,stride
+    else:
+      sh,sw = stride
+    
+    if isinstance(padding,int):
+      ph,pw = padding,padding
+    else:
+      ph,pw = padding
+    
+    N, Cin, Hin, Win = x.shape
+    Cout, _, Kh, Kw = w.shape
+    
+    Hout = (Hin + 2 * ph - Kh) // sh + 1
+    Wout = (Win + 2 * pw - Kw) // sw + 1
+    
+    x_padded = np.pad(
+      x,
+      ((0,0),(0,0),(ph,ph),(pw,pw)),
+      mode='constant'
+    )
+    out_data = np.zeros((N,Cout,Hout,Wout))
+    
+    for n in range(N):
+      for cout in range(Cout):
+        for i in range(Hout):
+          for j in range(Wout):
+            
+            h_start = i * sh
+            w_start = j * sw
+            
+            patch = x_padded[
+              n,
+              :,
+              h_start : h_start + Kh,
+              w_start : w_start + Kw
+            ]
+            out_data[n,cout,i,j] = np.sum(
+              patch * w[cout]
+            )
+            if b is not None:
+              out_data[n,cout,i,j] += b[0,cout,0,0]
+    children = (self,weight) if bias is None else (self,weight,bias)
+    out = value(out_data,children,'conv2D')
+  
+    def _backward():
+      dout = out.grad
+      dx_padded = np.zeros_like(x_padded,dtype=np.float32)
+      dkernel = np.zeros_like(w,dtype=np.float32)
+      
+      if bias is not None:
+        dbias = np.sum(dout,axis=(0,2,3),keepdims=True).astype(np.float32)
+        bias.grad += dbias
+      
+      for n in range(N):
+        for cout in range(Cout):
+          for i in range(Hout):
+            for j in range(Wout):
+              
+              h_start = i * sh
+              w_start = j * sw
+              
+              x_slice = x_padded[
+                n,
+                :,
+                h_start : h_start + Kh,
+                w_start : w_start + Kw
+              ]
+              grad = dout[n,cout,i,j]
+              dkernel[cout] += grad*x_slice
+              dx_padded[n,:,h_start:h_start+Kh,w_start:w_start+Kw] += grad * w[cout]
+              
+      if ph > 0 or pw > 0:
+          dx = dx_padded[:, :, ph:-ph, pw:-pw]
+      else:
+          dx = dx_padded
+          
+      self.grad += dx
+      weight.grad += dkernel
+      
+    out._backward = _backward
+    
+    return out
+  
+  def flatten(self):
+    out_data =  self.data.reshape(self.data.shape[0],-1)
+    out = value(out_data,(self,),'flatten')
+    
+    def _backward():
+      self.grad += out.grad.reshape(self.data.shape)
+      
+    out._backward = _backward
+    return out
+  
   def backward(self):
     topo = []
     visited = set()
-
+    
     def build_topo(v):
         if v not in visited:
             visited.add(v)

@@ -66,3 +66,31 @@ class MLP:
   def parameters(self):
         return [p for layer in self.layers for p in layer.parameters()]
       
+class conv2D:
+  def __init__(self,inp_channel,out_channel,Kernel_size,stride=1,padding=0):
+    self.stride = stride
+    self.padding = padding
+    
+    if isinstance(Kernel_size,int):
+      Kh,Kw = Kernel_size,Kernel_size
+    else:
+      Kh,Kw = Kernel_size
+    
+    weight_shape = (out_channel,inp_channel,Kh,Kw)
+    
+    self.w = value(np.random.randn(*weight_shape) * 0.1)
+    self.b = value(np.zeros((1,out_channel,1,1)))
+    
+  def __call__(self, x):
+    return x.conv2D(self.w,self.b,stride=self.stride,padding=self.padding)
+  
+  def parameters(self):
+    return [self.w,self.b] 
+    
+class flatten:
+  def __call__(self,x):
+    return x.flatten()
+
+  def parameters(self):
+    return[]
+    

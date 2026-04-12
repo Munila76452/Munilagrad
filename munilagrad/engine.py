@@ -217,6 +217,88 @@ class value:
     out._backward = _backward
     return out
   
+  def maxPool(self,Kernel_size,stride=1,padding=0):
+    x = self.data
+    
+    if isinstance(Kernel_size,int):
+      Kh , Kw = Kernel_size,Kernel_size
+    else:
+      Kh,Kw = Kernel_size
+      
+    if isinstance(stride,int):
+      sh , sw = stride,stride
+    else:
+      sh,sw = stride
+    
+    if isinstance(padding,int):
+      ph,pw = padding,padding
+    else:
+      ph,pw = padding
+      
+    N,C,H_in,W_in = x.shape
+    
+    H_out = ((H_in + 2 * ph - Kh) // sh) + 1
+    W_out = ((W_in + 2 * pw - Kw) // sw) + 1
+    
+    x_padded = np.pad(
+      x,
+      ((0,0),(0,0),(ph,ph),(pw,pw)),
+      mode='constant',
+      constant_values = -np.inf
+    )
+    
+    out_data = np.zeros((N,C,H_out,W_out))
+    
+    for n in range(N):
+      for c in range(C):
+        for i in range(H_out):
+          for j in range(W_out):
+            
+            h_start = i * sh
+            w_start = j * sw
+            
+            patch = x_padded[
+              n,
+              c,
+              h_start : h_start + Kh,
+              w_start : w_start + Kw
+            ]
+            
+            out_data[n,c,i,j] = np.max(patch)
+            
+    out = value(out_data,(self,),'maxpool')
+    def _backward():
+      dout = out.grad
+      
+      dx_padded = np.zeros_like(x_padded,dtype=float)
+      
+      for n in range(N):
+        for c in range(C):
+          for i in range(H_out):
+            for j in range(W_out):
+              h_start = i * sh
+              w_start = j * sw
+              
+              patch = x_padded[
+                n,
+                c,
+                h_start : h_start + Kh,
+                w_start : w_start + Kw
+              ]
+              idx = np.argmax(patch)
+              max_idx_h , max_idx_w = np.unravel_index(idx,patch.shape)
+              dx_padded[n,c,h_start+max_idx_h,w_start+max_idx_w] += dout[n,c,i,j]
+              
+      if ph > 0 or pw > 0:
+        dx = dx_padded[:,:,ph:-ph,pw:-pw]
+      else:
+        dx = dx_padded
+        
+      self.grad += dx
+      
+    out._backward = _backward
+    return out
+             
   def backward(self):
     topo = []
     visited = set()

@@ -1,4 +1,4 @@
-from .engine import value
+from munilagrad.engine import value
 import random
 import numpy as np
 # class Neuron:
@@ -93,4 +93,17 @@ class flatten:
 
   def parameters(self):
     return[]
+  
+class maxpool2D:
+  
+  def __init__(self,Kernel_size,stride=1,padding=0):
+    self.Kernel_size = Kernel_size
+    self.stride = stride
+    self.padding = padding
     
+  def __call__(self,x):
+    return x.maxPool(self.Kernel_size,stride=self.stride,padding=self.padding)
+    
+  def parameters(self):
+    return [] # No learnable weights in pooling
+  

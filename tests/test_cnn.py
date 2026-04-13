@@ -108,7 +108,7 @@ import matplotlib.pyplot as plt
 # plt.ylabel("Loss")
 # plt.grid(True)
 # plt.show()
-
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from munilagrad.engine import value
@@ -116,13 +116,18 @@ from munilagrad.nn import conv2D, maxpool2D, flatten, Linear
 from munilagrad.loss import MSELoss
 from munilagrad.optim import SGD
 
+# --- 1. Dataset Generation ---
+# 4 samples of 6x6 images (1 channel)
 X = np.zeros((4, 1, 6, 6))
 
+# Vertical Lines
 X[0, 0, :, 2:4] = 1.0
 X[1, 0, :, 3:5] = 1.0
+# Horizontal Lines
 X[2, 0, 2:4, :] = 1.0
 X[3, 0, 3:5, :] = 1.0
 
+# Targets: 1.0 for Vertical, 0.0 for Horizontal
 Y = np.array([
     [1.0], 
     [1.0], 
@@ -130,11 +135,13 @@ Y = np.array([
     [0.0]
 ])
 
+# --- 2. Model Definition ---
 class SimpleCNN:
     def __init__(self):
         self.conv1 = conv2D(inp_channel=1, out_channel=2, Kernel_size=3, stride=1, padding=0)
         self.pool = maxpool2D(Kernel_size=2, stride=2)
-        self.fc = Linear(nin=8, nout=1)
+        # Note: Depending on your pooling implementation, nin might be 8. Adjust if necessary!
+        self.fc = Linear(nin=8, nout=1) 
 
     def __call__(self, x):
         x = self.conv1(x).relu() 
@@ -146,6 +153,7 @@ class SimpleCNN:
     def parameters(self):
         return self.conv1.parameters() + self.fc.parameters()
 
+# --- 3. Training Setup ---
 model = SimpleCNN()
 criterion = MSELoss()
 optimizer = SGD(model.parameters(), lr=0.05) 
@@ -153,14 +161,24 @@ optimizer = SGD(model.parameters(), lr=0.05)
 epochs = 50
 loss_history = []
 
-print("Starting CNN Training (This might take 10-30 seconds...)")
+print("Starting CNN Training Benchmarks...")
+print("-----------------------------------")
+
+# ==========================================
+# start time 
+# ==========================================
+start_time = time.time()
+
 for epoch in range(epochs):
+    # Forward Pass
     predictions = model(value(X))
     loss = criterion(predictions, Y)
     
+    # Backward Pass
     optimizer.zero_grad()
     loss.backward()
     
+    # Update Weights
     optimizer.step()
     
     loss_history.append(loss.data.item())
@@ -168,15 +186,28 @@ for epoch in range(epochs):
     if epoch % 5 == 0 or epoch == epochs - 1:
         print(f"Epoch {epoch:02d} | Loss: {loss.data.item():.4f}")
 
-print("\n--- Final Predictions ---")
+# ==========================================
+# end time
+# ==========================================
+end_time = time.time()
+total_time = end_time - start_time
+
+# --- 4. Benchmark Results ---
+print("\n" + "="*40)
+print(f"⏱️  TRAINING COMPLETED IN: {total_time:.4f} seconds")
+print("="*40 + "\n")
+
+# --- 5. Final Output ---
+print("--- Final Predictions ---")
 final_preds = model(value(X))
 for i in range(len(X)):
     label = "Vertical  " if Y[i][0] == 1.0 else "Horizontal"
     print(f"{label} Image -> Target: {Y[i][0]} | Prediction: {final_preds.data[i][0]:.4f}")
 
+# Plotting
 plt.figure(figsize=(8, 5))
 plt.plot(range(epochs), loss_history, color='red', linewidth=2)
-plt.title("Munilagrad CNN Training Loss (Vertical vs Horizontal)")
+plt.title(f"Munilagrad CNN Training Loss\n(Execution Time: {total_time:.4f}s)")
 plt.xlabel("Epoch")
 plt.ylabel("MSE Loss")
 plt.grid(True)

@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from munilagrad.utils import im2col_loops,col2im_loops,img2col,col2img
 class value:
   def __init__(self,data,children=(),_op='', label=''):    
     self.data = np.array(data,dtype=float)
@@ -139,72 +140,92 @@ class value:
     Hout = (Hin + 2 * ph - Kh) // sh + 1
     Wout = (Win + 2 * pw - Kw) // sw + 1
     
-    x_padded = np.pad(
-      x,
-      ((0,0),(0,0),(ph,ph),(pw,pw)),
-      mode='constant'
-    )
-    out_data = np.zeros((N,Cout,Hout,Wout))
+    # x_padded = np.pad(
+    #   x,
+    #   ((0,0),(0,0),(ph,ph),(pw,pw)),
+    #   mode='constant'
+    # )
+    # out_data = np.zeros((N,Cout,Hout,Wout))
     
-    for n in range(N):
-      for cout in range(Cout):
-        for i in range(Hout):
-          for j in range(Wout):
+    # for n in range(N):
+    #   for cout in range(Cout):
+    #     for i in range(Hout):
+    #       for j in range(Wout):
             
-            h_start = i * sh
-            w_start = j * sw
+    #         h_start = i * sh
+    #         w_start = j * sw
             
-            patch = x_padded[
-              n,
-              :,
-              h_start : h_start + Kh,
-              w_start : w_start + Kw
-            ]
-            out_data[n,cout,i,j] = np.sum(
-              patch * w[cout]
-            )
-            if b is not None:
-              out_data[n,cout,i,j] += b[0,cout,0,0]
+    #         patch = x_padded[
+    #           n,
+    #           :,
+    #           h_start : h_start + Kh,
+    #           w_start : w_start + Kw
+    #         ]
+    #         out_data[n,cout,i,j] = np.sum(
+    #           patch * w[cout]
+    #         )
+    #         if b is not None:
+    #           out_data[n,cout,i,j] += b[0,cout,0,0]
+    X_col = img2col(x,(Kh,Kw),stride=(sh,sw),padding=(ph,pw))
+    W_row = w.reshape(Cout,-1)
+    out_col = W_row @ X_col
+    
+    if bias is not None:
+      out_col += b.reshape(Cout,1)
+    
+    out_data = out_col.reshape(Cout, N, Hout, Wout).transpose(1, 0, 2, 3)
+    
     children = (self,weight) if bias is None else (self,weight,bias)
     out = value(out_data,children,'conv2D')
   
     def _backward():
-      dout = out.grad
-      dx_padded = np.zeros_like(x_padded,dtype=np.float32)
-      dkernel = np.zeros_like(w,dtype=np.float32)
+      # dout = out.grad
+      # dx_padded = np.zeros_like(x_padded,dtype=np.float32)
+      # dkernel = np.zeros_like(w,dtype=np.float32)
       
-      if bias is not None:
-        dbias = np.sum(dout,axis=(0,2,3),keepdims=True).astype(np.float32)
-        bias.grad += dbias
+      # if bias is not None:
+      #   dbias = np.sum(dout,axis=(0,2,3),keepdims=True).astype(np.float32)
+      #   bias.grad += dbias
       
-      for n in range(N):
-        for cout in range(Cout):
-          for i in range(Hout):
-            for j in range(Wout):
+      # for n in range(N):
+      #   for cout in range(Cout):
+      #     for i in range(Hout):
+      #       for j in range(Wout):
               
-              h_start = i * sh
-              w_start = j * sw
+      #         h_start = i * sh
+      #         w_start = j * sw
               
-              x_slice = x_padded[
-                n,
-                :,
-                h_start : h_start + Kh,
-                w_start : w_start + Kw
-              ]
-              grad = dout[n,cout,i,j]
-              dkernel[cout] += grad*x_slice
-              dx_padded[n,:,h_start:h_start+Kh,w_start:w_start+Kw] += grad * w[cout]
+      #         x_slice = x_padded[
+      #           n,
+      #           :,
+      #           h_start : h_start + Kh,
+      #           w_start : w_start + Kw
+      #         ]
+      #         grad = dout[n,cout,i,j]
+      #         dkernel[cout] += grad*x_slice
+      #         dx_padded[n,:,h_start:h_start+Kh,w_start:w_start+Kw] += grad * w[cout]
               
-      if ph > 0 or pw > 0:
-          dx = dx_padded[:, :, ph:-ph, pw:-pw]
-      else:
-          dx = dx_padded
+      # if ph > 0 or pw > 0:
+      #     dx = dx_padded[:, :, ph:-ph, pw:-pw]
+      # else:
+      #     dx = dx_padded
           
-      self.grad += dx
-      weight.grad += dkernel
+      # self.grad += dx
+      # weight.grad += dkernel
+      
+      dout = out.grad
+      dout_reshaped = dout.transpose(1,0,2,3).reshape(Cout,-1)
+      if bias is not None:
+        bias.grad += np.sum(dout,axis=(0,2,3),keepdims=True).astype(np.float32)
+      
+      dw_flattened = dout_reshaped @ X_col.T
+      weight.grad += dw_flattened.reshape(w.shape)
+
+      dX_col = W_row.T @ dout_reshaped
+
+      self.grad += col2img(dX_col, x.shape, (Kh, Kw), stride=(sh, sw), padding=(ph, pw))
       
     out._backward = _backward
-    
     return out
   
   def flatten(self):
@@ -240,62 +261,81 @@ class value:
     H_out = ((H_in + 2 * ph - Kh) // sh) + 1
     W_out = ((W_in + 2 * pw - Kw) // sw) + 1
     
-    x_padded = np.pad(
-      x,
-      ((0,0),(0,0),(ph,ph),(pw,pw)),
-      mode='constant',
-      constant_values = -np.inf
-    )
+    # x_padded = np.pad(
+    #   x,
+    #   ((0,0),(0,0),(ph,ph),(pw,pw)),
+    #   mode='constant',
+    #   constant_values = -np.inf
+    # )
     
-    out_data = np.zeros((N,C,H_out,W_out))
+    # out_data = np.zeros((N,C,H_out,W_out))
     
-    for n in range(N):
-      for c in range(C):
-        for i in range(H_out):
-          for j in range(W_out):
+    # for n in range(N):
+    #   for c in range(C):
+    #     for i in range(H_out):
+    #       for j in range(W_out):
             
-            h_start = i * sh
-            w_start = j * sw
+    #         h_start = i * sh
+    #         w_start = j * sw
             
-            patch = x_padded[
-              n,
-              c,
-              h_start : h_start + Kh,
-              w_start : w_start + Kw
-            ]
+    #         patch = x_padded[
+    #           n,
+    #           c,
+    #           h_start : h_start + Kh,
+    #           w_start : w_start + Kw
+    #         ]
             
-            out_data[n,c,i,j] = np.max(patch)
-            
+    #         out_data[n,c,i,j] = np.max(patch)
+    X_col = img2col(x, (Kh, Kw), stride=(sh, sw), padding=(ph, pw))
+    
+    X_col_reshaped = X_col.reshape(C, Kh * Kw, -1)
+
+    out_col = np.max(X_col_reshaped, axis=1) 
+    max_indices = np.argmax(X_col_reshaped, axis=1) 
+    
+    out_data = out_col.reshape(C, N, H_out, W_out).transpose(1, 0, 2, 3)
     out = value(out_data,(self,),'maxpool')
+    
     def _backward():
       dout = out.grad
       
-      dx_padded = np.zeros_like(x_padded,dtype=float)
+      # dx_padded = np.zeros_like(x_padded,dtype=float)
       
-      for n in range(N):
-        for c in range(C):
-          for i in range(H_out):
-            for j in range(W_out):
-              h_start = i * sh
-              w_start = j * sw
+      # for n in range(N):
+      #   for c in range(C):
+      #     for i in range(H_out):
+      #       for j in range(W_out):
+      #         h_start = i * sh
+      #         w_start = j * sw
               
-              patch = x_padded[
-                n,
-                c,
-                h_start : h_start + Kh,
-                w_start : w_start + Kw
-              ]
-              idx = np.argmax(patch)
-              max_idx_h , max_idx_w = np.unravel_index(idx,patch.shape)
-              dx_padded[n,c,h_start+max_idx_h,w_start+max_idx_w] += dout[n,c,i,j]
+      #         patch = x_padded[
+      #           n,
+      #           c,
+      #           h_start : h_start + Kh,
+      #           w_start : w_start + Kw
+      #         ]
+      #         idx = np.argmax(patch)
+      #         max_idx_h , max_idx_w = np.unravel_index(idx,patch.shape)
+      #         dx_padded[n,c,h_start+max_idx_h,w_start+max_idx_w] += dout[n,c,i,j]
               
-      if ph > 0 or pw > 0:
-        dx = dx_padded[:,:,ph:-ph,pw:-pw]
-      else:
-        dx = dx_padded
+      # if ph > 0 or pw > 0:
+      #   dx = dx_padded[:,:,ph:-ph,pw:-pw]
+      # else:
+      #   dx = dx_padded
         
-      self.grad += dx
+      # self.grad += dx
+      dout_flat = dout.transpose(1, 0, 2, 3).reshape(C, -1)
+
+      dX_col_reshaped = np.zeros_like(X_col_reshaped)
+
+      c_idx = np.arange(C).reshape(-1, 1) 
+      col_idx = np.arange(dX_col_reshaped.shape[2]) 
       
+      dX_col_reshaped[c_idx, max_indices, col_idx] = dout_flat
+      
+      dX_col = dX_col_reshaped.reshape(C * Kh * Kw, -1)
+      
+      self.grad += col2img(dX_col, x.shape, (Kh, Kw), stride=(sh, sw), padding=(ph, pw))
     out._backward = _backward
     return out
              

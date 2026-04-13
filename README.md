@@ -1,6 +1,8 @@
 1 . munilagrad can now do Autodifferentiation
 2 . added rnn to it 
 3. added conv2D , flatten , maxpool2D
+4. added img2col and col2img to optimise the code like before it takes 0.06 sec to train an cnn with 4 pic after this implemntation it takes 0.014 sec to train the same network , that an massive update so this is well documented in issue#1 and you can view how it is implmented ,and also its img2col.md file for full understanding 
+
 
 munilagrad not only supports scaler but also numpy array 
 <!-- while doing that we implemented unbroadcasting for backward pass -->

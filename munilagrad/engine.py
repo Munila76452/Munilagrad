@@ -100,6 +100,22 @@ class value:
     out._backward = _backward
     return out
   
+  def softmax(self, axis=-1):
+
+        x = self.data
+        shifted_x = x - np.max(x, axis=axis, keepdims=True)
+        exps = np.exp(shifted_x)
+        probs = exps / np.sum(exps, axis=axis, keepdims=True)
+        out = value(probs, (self,), 'softmax')
+        
+        def _backward():
+            dout = out.grad
+            sum_dout_probs = np.sum(dout * probs, axis=axis, keepdims=True)
+            self.grad += probs * (dout - sum_dout_probs)
+        
+        out._backward = _backward
+        return out
+      
   def exp(self):
     x = self.data
     out = value(np.exp(x),(self,),'exp')
@@ -173,7 +189,8 @@ class value:
     if bias is not None:
       out_col += b.reshape(Cout,1)
     
-    out_data = out_col.reshape(Cout, N, Hout, Wout).transpose(1, 0, 2, 3)
+    # out_data = out_col.reshape(Cout, N, Hout, Wout).transpose(1, 0, 2, 3)
+    out_data = out_col.reshape(Cout, Hout, Wout, N).transpose(3, 0, 1, 2)
     
     children = (self,weight) if bias is None else (self,weight,bias)
     out = value(out_data,children,'conv2D')
@@ -293,7 +310,9 @@ class value:
     out_col = np.max(X_col_reshaped, axis=1) 
     max_indices = np.argmax(X_col_reshaped, axis=1) 
     
-    out_data = out_col.reshape(C, N, H_out, W_out).transpose(1, 0, 2, 3)
+    # out_data = out_col.reshape(C, N, H_out, W_out).transpose(1, 0, 2, 3)
+    out_data = out_col.reshape(C, H_out, W_out, N).transpose(3, 0, 1, 2)
+    
     out = value(out_data,(self,),'maxpool')
     
     def _backward():

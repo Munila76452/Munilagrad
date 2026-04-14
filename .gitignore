@@ -9,7 +9,17 @@ __pycache__/
 # Generated Graphs
 graphs/
 *.svg
+
+# OS Files
 .DS_Store
+
+# Build Artifacts
 dist/
 build/
 *.egg-info/
+
+# Datasets
+data/
+
+# Model Weights
+*.npz

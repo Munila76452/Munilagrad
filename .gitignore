@@ -23,3 +23,5 @@ data/
 
 # Model Weights
 *.npz
+
+mlp_graph

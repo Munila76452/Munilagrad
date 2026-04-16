@@ -2,6 +2,8 @@
 2 . added rnn to it 
 3. added conv2D , flatten , maxpool2D
 4. added img2col and col2img to optimise the code like before it takes 0.06 sec to train an cnn with 4 pic after this implemntation it takes 0.014 sec to train the same network , that an massive update so this is well documented in issue#1 and you can view how it is implmented ,and also its img2col.md file for full understanding 
+5. munilagrad succesfully trained a mnist dataset with fial loss of 0.504
+6.munilagrad can now record audio and can plot the spectograme (written from scratch and has same ~ match from in-buit scipy.spectograme fucn) 
 
 
 munilagrad not only supports scaler but also numpy array 

@@ -101,20 +101,27 @@ class value:
     return out
   
   def softmax(self, axis=-1):
-
-        x = self.data
-        shifted_x = x - np.max(x, axis=axis, keepdims=True)
-        exps = np.exp(shifted_x)
-        probs = exps / np.sum(exps, axis=axis, keepdims=True)
-        out = value(probs, (self,), 'softmax')
-        
-        def _backward():
-            dout = out.grad
-            sum_dout_probs = np.sum(dout * probs, axis=axis, keepdims=True)
-            self.grad += probs * (dout - sum_dout_probs)
-        
-        out._backward = _backward
-        return out
+    x = self.data
+    shifted_x = x - np.max(x, axis=axis, keepdims=True)
+    exps = np.exp(shifted_x)
+    probs = exps / np.sum(exps, axis=axis, keepdims=True)
+    out = value(probs, (self,), 'softmax')
+    
+    def _backward():
+        dout = out.grad
+        sum_dout_probs = np.sum(dout * probs, axis=axis, keepdims=True)
+        self.grad += probs * (dout - sum_dout_probs)
+    
+    out._backward = _backward
+    return out
+  
+  def log(self):
+    # adding  tiny epsilon to prevent log(0)
+    out = value(np.log(self.data + 1e-15),(self,),'log')
+    def _backward():
+      self.grad += value.unbroacasting(out.grad * (1/(self.data + 1e-15)),self.data.shape)
+    out._backward = _backward
+    return out
       
   def exp(self):
     x = self.data

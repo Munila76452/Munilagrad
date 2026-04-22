@@ -161,8 +161,8 @@ optimizer = SGD(model.parameters(), lr=0.05)
 epochs = 50
 loss_history = []
 
-print("Starting CNN Training Benchmarks...")
-print("-----------------------------------")
+print("Starting CNN Training Benchmarks")
+print()
 
 # ==========================================
 # start time 
@@ -193,12 +193,13 @@ end_time = time.time()
 total_time = end_time - start_time
 
 # --- 4. Benchmark Results ---
-print("\n" + "="*40)
-print(f"⏱️  TRAINING COMPLETED IN: {total_time:.4f} seconds")
-print("="*40 + "\n")
-
+# print("\n" + "="*40)
+print()
+print(f"TRAINING COMPLETED IN: {total_time:.4f} seconds")
+print()
+# print("="*40 + "\n")
 # --- 5. Final Output ---
-print("--- Final Predictions ---")
+print("Final Predictions")
 final_preds = model(value(X))
 for i in range(len(X)):
     label = "Vertical  " if Y[i][0] == 1.0 else "Horizontal"

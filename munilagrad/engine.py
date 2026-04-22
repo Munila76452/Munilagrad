@@ -364,7 +364,21 @@ class value:
       self.grad += col2img(dX_col, x.shape, (Kh, Kw), stride=(sh, sw), padding=(ph, pw))
     out._backward = _backward
     return out
-             
+  
+  def global_avg_pooling(self):
+    B,C,H,W = self.data.shape
+    out_data = np.mean(self.data,axis=(2,3))
+    out = value(out_data,(self,),'global_avg_pooling')
+    
+    def _backward():
+      num_pixel = H * W
+      grad_distribution = out.grad / num_pixel
+      grad_reshaped = grad_distribution.reshape(B,C,1,1)
+      self.grad += grad_reshaped * np.ones_like(self.data)
+    
+    out._backward = _backward
+    return out 
+  
   def backward(self):
     topo = []
     visited = set()

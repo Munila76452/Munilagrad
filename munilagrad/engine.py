@@ -252,6 +252,98 @@ class value:
     out._backward = _backward
     return out
   
+  def transposed_conv2D(self,weight,bias,stride=1,padding=0):
+    x = self.data
+    w = weight.data
+    b = bias.data if bias else None
+    
+    if isinstance(stride,int):
+      sh,sw = stride,stride
+    else:
+      sh,sw = stride
+    if isinstance(padding,int):
+      ph,pw = padding,padding
+    else:
+      ph,pw = padding
+      
+    N, C_in, H_in, W_in = x.shape
+    _, C_out, K_h, K_w = w.shape
+    
+    H_out = (H_in - 1) * sh - 2 * ph + K_h
+    W_out = (W_in - 1) * sw - 2 * pw + K_w
+    
+    out_data = np.zeros((N,C_out,H_out,W_out))
+    
+    for n in range(N):
+      for c_in in range(C_in):
+        for c_out in range(C_out):
+          for i in range(H_in):
+            for j in range(W_in):
+              # calculating therotical bound
+              h_start = i * sh - ph
+              w_start = j * sw - pw
+              h_end = h_start + K_h
+              w_end = w_start + K_w
+              
+              # handling padding - constraint to valid bound
+              out_h_start = max(0,h_start)
+              out_w_start = max(0,w_start)
+              out_h_end = min(H_out,h_end)
+              out_w_end = min(W_out,w_end)
+              
+              # handling padding - crop the kernal stamp
+              k_h_start = out_h_start - h_start
+              k_w_start = out_w_start - w_start
+              k_h_end = K_h - (h_end - out_h_end)
+              k_w_end = K_w - (w_end - out_w_end)
+              
+              out_data[n,c_out,out_h_start:out_h_end,out_w_start:out_w_end] += x[n,c_in,i,j] * w[c_in,c_out,k_h_start:k_h_end,k_w_start:k_w_end]
+    if b is not None:
+      out_data += b.reshape(1,C_out,1,1)
+    children = (self,weight) if bias is None else (self,weight,bias)
+    out = value(out_data,children,'transposed_conv2D')
+    
+    def _backward():
+      dout = out.grad
+      dx = np.zeros_like(x,dtype=float)
+      dw = np.zeros_like(w,dtype=float)
+      
+      if bias is not None:
+        bias.grad += np.sum(dout,axis=(0,2,3),keepdims=True).astype(float)
+        
+      for n in range(N):
+        for c_in in range(C_in):
+          for c_out in range(C_out):
+            for i in range(H_in):
+              for j in range(W_in):
+                
+                h_start = i * sh - ph
+                w_start = j * sw - pw
+                h_end = h_start + K_h
+                w_end = w_start + K_w
+                
+                out_h_start = max(0, h_start)
+                out_w_start = max(0, w_start)
+                out_h_end = min(H_out, h_end)
+                out_w_end = min(W_out, w_end)
+                
+                k_h_start = out_h_start - h_start
+                k_w_start = out_w_start - w_start
+                k_h_end = K_h - (h_end - out_h_end)
+                k_w_end = K_w - (w_end - out_w_end)
+                
+                dout_slice = dout[n,c_out,out_h_start:out_h_end,out_w_start:out_w_end]
+                k_slice = w[c_in, c_out, k_h_start:k_h_end, k_w_start:k_w_end]
+                
+                dx[n,c_in,i,j] += np.sum(dout_slice * k_slice)
+                dw[c_in,c_out,k_h_start:k_h_end,k_w_start:k_w_end] += x[n, c_in, i, j] * dout_slice
+                
+      self.grad += dx
+      weight.grad += dw
+      
+    out._backward = _backward
+    return out
+  
   def flatten(self):
     out_data =  self.data.reshape(self.data.shape[0],-1)
     out = value(out_data,(self,),'flatten')

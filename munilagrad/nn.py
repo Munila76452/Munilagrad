@@ -105,5 +105,32 @@ class maxpool2D:
     return x.maxPool(self.Kernel_size,stride=self.stride,padding=self.padding)
     
   def parameters(self):
-    return [] # No learnable weights in pooling
+    return [] 
   
+class transposed_conv2D:
+  def __init__(self,inp_channel,out_channel,Kernel_size,stride=1,padding=0):
+    self.stride = stride
+    self.padding = padding
+    
+    if isinstance(Kernel_size,int):
+      Kh , Kw = Kernel_size,Kernel_size
+    else:
+      Kh,Kw = Kernel_size
+      
+    weight_size = (inp_channel,out_channel,Kh,Kw)
+    
+    self.w = value(np.random.randn(*weight_size)*0.1)
+    self.b = value(np.zeros((1,out_channel,1,1)))
+
+  def __call__(self, x):
+    return x.transposed_conv2D(self.w, self.b, stride=self.stride, padding=self.padding)
+  
+  def parameters(self):
+    return [self.w, self.b]
+
+class global_max_pool2D:
+  def __call__(self, x):
+    return x.global_max_pooling()
+
+  def parameters(self):
+    return [] 

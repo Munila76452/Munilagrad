@@ -2,24 +2,25 @@ from munilagrad.engine import value
 from munilagrad.nn import MLP
 from munilagrad.viz import draw_dot
 import numpy as np
-# a = value([[1],[2],[3]])   # (3,1)
-# b = value(np.ones((3,4)))  # (3,4)
 
-# c = a / b
-# c.grad = np.ones((3,4))
+# 1. Create a tiny 1x1x2x2 input (Batch, Channels, Height, Width)
+x_data = np.array([[[[1.0, 2.0], 
+                     [3.0, 4.0]]]])
+x = value(x_data, label='x')
 
-# c._backward()
-# print(a.grad)
-# print(a.grad.shape)
-import numpy as np
+# 2. Create a 1x1x3x3 kernel (C_in, C_out, K_h, K_w)
+w_data = np.ones((1, 1, 3, 3))
+w = value(w_data, label='w')
 
-a = value(np.random.randn(3,4))
-b = value(np.random.randn(4,2))
+# 3. Forward Pass: Stride 2, Padding 0
+out = x.transposed_conv2D(w, bias=None, stride=2, padding=0)
 
-c = a.matmul(b)
-c.grad = np.ones((3,2))
+# 4. Create a dummy loss (sum of all elements)
+loss = out.sum()
 
-c._backward()
+# 5. Backward Pass
+loss.backward()
 
-print("a.grad shape:", a.grad.shape)  # (3,4)
-print("b.grad shape:", b.grad.shape)  # (4,2)
+# 6. Check the results
+print("Output Shape:", out.data.shape) # Should be (1, 1, 5, 5)
+print("\nInput Gradients (dx):\n", x.grad)
